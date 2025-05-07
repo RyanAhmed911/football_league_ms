@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 id="form-title">Add New Club</h1>
+    
+    <div class="alert alert-danger d-none" id="error-message"></div>
+    <div class="alert alert-success d-none" id="success-message"></div>
+    
+    <form id="club-form">
+        <input type="hidden" id="club-id">
+        
+        <div class="mb-3">
+            <label for="name" class="form-label">Club Name*</label>
+            <input type="text" class="form-control" id="name" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="stadium" class="form-label">Stadium</label>
+            <input type="text" class="form-control" id="stadium">
+        </div>
+        
+        <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <input type="text" class="form-control" id="location">
+        </div>
+        
+        <div class="mb-3">
+            <label for="founded" class="form-label">Founded Date</label>
+            <input type="date" class="form-control" id="founded">
+        </div>
+        
+        <div class="mb-3">
+            <label for="budget" class="form-label">Budget</label>
+            <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="budget" step="0.01" min="0">
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Save Club</button>
+            <a href="/clubs" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById('club-form');
+    let temp = window.location.pathname.split('/');
+    temp.pop(); // Remove the last empty element from the array
+    const clubIdd = temp.pop();
+    const clubId = window.location.pathname.includes('/edit/') ? 
+    clubIdd: null;
+    
+    // If we have a club ID, we're editing an existing club
+    if (clubId) {
+        document.getElementById('form-title').textContent = 'Edit Club';
+        document.getElementById('club-id').value = clubId;
+        console.log(clubId);
+        // Fetch club data and populate form
+        fetch(`/api/clubs/${clubId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Club not found');
+                }
+                return response.json();
+            })
+            .then(club => {
+                document.getElementById('name').value = club.name || '';
+                document.getElementById('stadium').value = club.stadium || '';
+                document.getElementById('location').value = club.location || '';
+                document.getElementById('founded').value = club.founded || '';
+                document.getElementById('budget').value = club.budget || 0;
+            })
+            .catch(error => {
+                showError('Error loading club: ' + error.message);
+            });
+    }
+    
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const clubData = {
+            name: document.getElementById('name').value,
+            stadium: document.getElementById('stadium').value || null,
+            location: document.getElementById('location').value || null,
+            founded: document.getElementById('founded').value || null,
+            budget: document.getElementById('budget').value ? 
+                parseFloat(document.getElementById('budget').value) : 0
+        };
+        
+        // Determine if we're creating or updating
+        const url = clubId ? `/api/clubs/${clubId}/` : '/api/clubs/';
+        const method = clubId ? 'PUT' : 'POST';
+        
+        // Send request to API
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(clubData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(JSON.stringify(data));
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            showSuccess('Club saved successfully!');
+            // Redirect after a short delay
+            setTimeout(() => {
+                window.location.href = `/clubs/${data.club_id || clubId}`;
+            }, 1500);
+        })
+        .catch(error => {
+            let errorMsg;
+            try {
+                errorMsg = JSON.parse(error.message);
+                errorMsg = Object.entries(errorMsg)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join('<br>');
+            } catch {
+                errorMsg = error.message;
+            }
+            showError('Error saving club: ' + errorMsg);
+        });
+    });
+    
+    // Helper functions
+    function showError(message) {
+        const errorElement = document.getElementById('error-message');
+        errorElement.innerHTML = message;
+        errorElement.classList.remove('d-none');
+        document.getElementById('success-message').classList.add('d-none');
+    }
+    
+    function showSuccess(message) {
+        const successElement = document.getElementById('success-message');
+        successElement.innerHTML = message;
+        successElement.classList.remove('d-none');
+        document.getElementById('error-message').classList.add('d-none');
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

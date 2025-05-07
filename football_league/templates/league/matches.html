@@ -1,0 +1,479 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Matches</h1>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addMatchModal">Add New Match</button>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Upcoming & Recent Matches</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Home Team</th>
+                        <th>Score</th>
+                        <th>Away Team</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="matches-table">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Match Modal -->
+<div class="modal fade" id="addMatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Match</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="add-error-message"></div>
+                <form id="add-match-form">
+                    <div class="mb-3">
+                        <label for="home-team" class="form-label">Home Team*</label>
+                        <select class="form-select" id="home-team" required>
+                            <option value="">Select Home Team</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="away-team" class="form-label">Away Team*</label>
+                        <select class="form-select" id="away-team" required>
+                            <option value="">Select Away Team</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="match-date" class="form-label">Match Date*</label>
+                        <input type="date" class="form-control" id="match-date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="match-time" class="form-label">Match Time*</label>
+                        <input type="time" class="form-control" id="match-time" required>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="set-initial-score">
+                                <label class="form-check-label" for="set-initial-score">
+                                    Set initial score (for past matches)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="initial-score-container" class="row mt-2 d-none">
+                        <div class="col-5">
+                            <label for="initial-home-goals" class="form-label">Home Goals</label>
+                            <input type="number" class="form-control" id="initial-home-goals" min="0" value="0">
+                        </div>
+                        <div class="col-2 text-center pt-4">
+                            <span>-</span>
+                        </div>
+                        <div class="col-5">
+                            <label for="initial-away-goals" class="form-label">Away Goals</label>
+                            <input type="number" class="form-control" id="initial-away-goals" min="0" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-match-btn">Save Match</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record Result Modal -->
+<div class="modal fade" id="recordResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Record Match Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="result-error-message"></div>
+                <form id="record-result-form">
+                    <input type="hidden" id="home-id">
+                    <input type="hidden" id="away-id">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-5">
+                            <p class="text-end mb-0" id="home-team-name">Home Team</p>
+                        </div>
+                        <div class="col-2 text-center">
+                            <span>vs</span>
+                        </div>
+                        <div class="col-5">
+                            <p class="mb-0" id="away-team-name">Away Team</p>
+                        </div>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="col-5">
+                            <input type="number" class="form-control" id="home-goals" min="0" required>
+                        </div>
+                        <div class="col-2 text-center">
+                            <span>-</span>
+                        </div>
+                        <div class="col-5">
+                            <input type="number" class="form-control" id="away-goals" min="0" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-result-btn">Save Result</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize modals
+    const addMatchModal = new bootstrap.Modal(document.getElementById('addMatchModal'));
+    const recordResultModal = new bootstrap.Modal(document.getElementById('recordResultModal'));
+    
+    // Toggle initial score fields
+    document.getElementById('set-initial-score').addEventListener('change', function() {
+        const initialScoreContainer = document.getElementById('initial-score-container');
+        if (this.checked) {
+            initialScoreContainer.classList.remove('d-none');
+        } else {
+            initialScoreContainer.classList.add('d-none');
+        }
+    });
+    
+    // Load clubs for dropdowns
+    function loadClubs() {
+        fetch('/api/clubs/')
+            .then(response => response.json())
+            .then(clubs => {
+                const homeSelect = document.getElementById('home-team');
+                const awaySelect = document.getElementById('away-team');
+                
+                // Clear existing options except the first one
+                homeSelect.innerHTML = '<option value="">Select Home Team</option>';
+                awaySelect.innerHTML = '<option value="">Select Away Team</option>';
+                
+                // Add club options
+                clubs.forEach(club => {
+                    const homeOption = document.createElement('option');
+                    homeOption.value = club.club_id;
+                    homeOption.textContent = club.name;
+                    homeSelect.appendChild(homeOption);
+                    
+                    const awayOption = document.createElement('option');
+                    awayOption.value = club.club_id;
+                    awayOption.textContent = club.name;
+                    awaySelect.appendChild(awayOption);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading clubs:', error);
+                showAddError('Failed to load clubs. Please refresh the page.');
+            });
+    }
+    
+    // Load matches
+    function loadMatches() {
+        fetch('/api/matches/')
+            .then(response => response.json())
+            .then(matches => {
+                console.log('Matches from API:', matches);
+                const table = document.getElementById('matches-table');
+                table.innerHTML = '';
+                
+                if (matches.length === 0) {
+                    table.innerHTML = '<tr><td colspan="6" class="text-center">No matches found</td></tr>';
+                    return;
+                }
+                
+                matches.forEach(match => {
+                    const row = document.createElement('tr');
+                    
+                    // Format date
+                    const matchDate = new Date(match.match_date);
+                    const formattedDate = matchDate.toLocaleDateString();
+                    
+                    // Check if match has been played
+                    const hasResult = match.home_goals !== null && match.away_goals !== null;
+                    const scoreDisplay = hasResult 
+                        ? `${match.home_goals} - ${match.away_goals}`
+                        : 'vs';
+                    
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td>${match.match_time}</td>
+                        <td>${match.home_team}</td>
+                        <td class="text-center">${scoreDisplay}</td>
+                        <td>${match.away_team}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                ${!hasResult ? `
+                                    <button class="btn btn-primary record-result-btn" 
+                                        data-home-id="${match.home_id}" 
+                                        data-away-id="${match.away_id}"
+                                        data-home-team="${match.home_team}"
+                                        data-away-team="${match.away_team}">
+                                        Record Result
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-warning update-result-btn"
+                                        data-home-id="${match.home_id}" 
+                                        data-away-id="${match.away_id}"
+                                        data-home-team="${match.home_team}"
+                                        data-away-team="${match.away_team}"
+                                        data-home-goals="${match.home_goals}"
+                                        data-away-goals="${match.away_goals}">
+                                        Update Result
+                                    </button>
+                                `}
+                            </div>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+                
+                // Add event listeners to record result buttons
+                document.querySelectorAll('.record-result-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const homeId = this.getAttribute('data-home-id');
+                        const awayId = this.getAttribute('data-away-id');
+                        const homeTeam = this.getAttribute('data-home-team');
+                        const awayTeam = this.getAttribute('data-away-team');
+                        
+                        document.getElementById('home-id').value = homeId;
+                        document.getElementById('away-id').value = awayId;
+                        document.getElementById('home-team-name').textContent = homeTeam;
+                        document.getElementById('away-team-name').textContent = awayTeam;
+                        document.getElementById('home-goals').value = '';
+                        document.getElementById('away-goals').value = '';
+                        
+                        // Set modal title for new record
+                        document.querySelector('#recordResultModal .modal-title').textContent = 'Record Match Result';
+                        
+                        recordResultModal.show();
+                    });
+                });
+                
+                // Add event listeners to update result buttons
+                document.querySelectorAll('.update-result-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const homeId = this.getAttribute('data-home-id');
+                        const awayId = this.getAttribute('data-away-id');
+                        const homeTeam = this.getAttribute('data-home-team');
+                        const awayTeam = this.getAttribute('data-away-team');
+                        const homeGoals = this.getAttribute('data-home-goals');
+                        const awayGoals = this.getAttribute('data-away-goals');
+                        
+                        document.getElementById('home-id').value = homeId;
+                        document.getElementById('away-id').value = awayId;
+                        document.getElementById('home-team-name').textContent = homeTeam;
+                        document.getElementById('away-team-name').textContent = awayTeam;
+                        document.getElementById('home-goals').value = homeGoals;
+                        document.getElementById('away-goals').value = awayGoals;
+                        
+                        // Change modal title to indicate update
+                        document.querySelector('#recordResultModal .modal-title').textContent = 'Update Match Result';
+                        
+                        recordResultModal.show();
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error loading matches:', error);
+                document.getElementById('matches-table').innerHTML = 
+                    '<tr><td colspan="6" class="text-center">Error loading matches</td></tr>';
+            });
+    }
+    
+    // Save new match
+    document.getElementById('save-match-btn').addEventListener('click', function() {
+        const homeTeam = document.getElementById('home-team').value;
+        const awayTeam = document.getElementById('away-team').value;
+        const matchDate = document.getElementById('match-date').value;
+        const matchTime = document.getElementById('match-time').value;
+        
+        // Validate form
+        if (!homeTeam || !awayTeam || !matchDate || !matchTime) {
+            showAddError('Please fill in all required fields.');
+            return;
+        }
+        
+        if (homeTeam === awayTeam) {
+            showAddError('Home team and away team cannot be the same.');
+            return;
+        }
+        
+        const matchData = {
+            home_id: parseInt(homeTeam),
+            away_id: parseInt(awayTeam),
+            match_date: matchDate,
+            match_time: matchTime
+        };
+        
+        // Add scores if the checkbox is checked
+        if (document.getElementById('set-initial-score').checked) {
+            matchData.home_goals = parseInt(document.getElementById('initial-home-goals').value) || 0;
+            matchData.away_goals = parseInt(document.getElementById('initial-away-goals').value) || 0;
+            console.log('Sending match with initial scores:', matchData);
+        }
+        
+        fetch('/api/matches/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(matchData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(JSON.stringify(data));
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response:', data);
+            // Reset form and close modal
+            document.getElementById('add-match-form').reset();
+            document.getElementById('initial-score-container').classList.add('d-none');
+            addMatchModal.hide();
+            
+            // Reload matches
+            loadMatches();
+        })
+        .catch(error => {
+            let errorMsg;
+            try {
+                errorMsg = JSON.parse(error.message);
+                errorMsg = Object.entries(errorMsg)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join('<br>');
+            } catch {
+                errorMsg = error.message;
+            }
+            showAddError('Error saving match: ' + errorMsg);
+        });
+    });
+    
+    // Save match result
+    document.getElementById('save-result-btn').addEventListener('click', function() {
+        const homeId = document.getElementById('home-id').value;
+        const awayId = document.getElementById('away-id').value;
+        const homeGoals = document.getElementById('home-goals').value;
+        const awayGoals = document.getElementById('away-goals').value;
+        
+        // Validate form
+        if (!homeGoals || !awayGoals) {
+            showResultError('Please enter goals for both teams.');
+            return;
+        }
+        
+        const resultData = {
+            home_goals: parseInt(homeGoals),
+            away_goals: parseInt(awayGoals)
+        };
+        
+        fetch(`/api/matches/${homeId}/${awayId}/result/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(resultData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(JSON.stringify(data));
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Reset form and close modal
+            document.getElementById('record-result-form').reset();
+            recordResultModal.hide();
+            
+            // Reload matches
+            loadMatches();
+        })
+        .catch(error => {
+            let errorMsg;
+            try {
+                errorMsg = JSON.parse(error.message);
+                errorMsg = Object.entries(errorMsg)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join('<br>');
+            } catch {
+                errorMsg = error.message;
+            }
+            showResultError('Error saving result: ' + errorMsg);
+        });
+    });
+    
+    // Helper functions
+    function showAddError(message) {
+        const errorElement = document.getElementById('add-error-message');
+        errorElement.innerHTML = message;
+        errorElement.classList.remove('d-none');
+    }
+    
+    function showResultError(message) {
+        const errorElement = document.getElementById('result-error-message');
+        errorElement.innerHTML = message;
+        errorElement.classList.remove('d-none');
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadClubs();
+        loadMatches();
+        
+        // Reset error messages when modals are closed
+        document.getElementById('addMatchModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('add-error-message').classList.add('d-none');
+        });
+        
+        document.getElementById('recordResultModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('result-error-message').classList.add('d-none');
+        });
+    });
+</script>
+{% endblock %}

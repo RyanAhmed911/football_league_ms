@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1>Football League Management System</h1>
+    <p class="lead">Welcome to the Football League Management System</p>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Top Scorers</h5>
+            </div>
+            <div class="card-body">
+                <ul id="top-scorers-list" class="list-group list-group-flush">
+                    <li class="list-group-item">Loading...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Recent Matches</h5>
+            </div>
+            <div class="card-body">
+                <ul id="recent-matches-list" class="list-group list-group-flush">
+                    <li class="list-group-item">Loading...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Active Transfers</h5>
+            </div>
+            <div class="card-body">
+                <ul id="active-transfers-list" class="list-group list-group-flush">
+                    <li class="list-group-item">Loading...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch top scorers
+    fetch('/api/players/top-scorers/')
+        .then(response => response.json())
+        .then(data => {
+            const list = document.getElementById('top-scorers-list');
+            list.innerHTML = '';
+            data.forEach(player => {
+                const item = document.createElement('li');
+                item.className = 'list-group-item';
+                item.innerHTML = `<a href="/players/${player.player_id}">${player.name}</a> - Goals: ${player.goals}`;
+                list.appendChild(item);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching top scorers:', error);
+            document.getElementById('top-scorers-list').innerHTML = '<li class="list-group-item">Error loading data</li>';
+        });
+
+    // Fetch recent matches
+    fetch('/api/matches/')
+        .then(response => response.json())
+        .then(data => {
+            const list = document.getElementById('recent-matches-list');
+            list.innerHTML = '';
+            data.slice(0, 5).forEach(match => {
+                const item = document.createElement('li');
+                item.className = 'list-group-item';
+                item.innerHTML = `${match.home_team} ${match.home_goals} - ${match.away_goals} ${match.away_team}`;
+                list.appendChild(item);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching matches:', error);
+            document.getElementById('recent-matches-list').innerHTML = '<li class="list-group-item">Error loading data</li>';
+        });
+
+    // Fetch active transfers
+    fetch('/api/transfers/active/')
+        .then(response => response.json())
+        .then(data => {
+            const list = document.getElementById('active-transfers-list');
+            list.innerHTML = '';
+            data.forEach(transfer => {
+                const item = document.createElement('li');
+                item.className = 'list-group-item';
+                item.innerHTML = `${transfer.sender_name} wants to buy ${transfer.player_name} from ${transfer.receiver_name} for $${transfer.offer_amount}`;
+                list.appendChild(item);
+            });
+            if (data.length === 0) {
+                list.innerHTML = '<li class="list-group-item">No active transfers</li>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching transfers:', error);
+            document.getElementById('active-transfers-list').innerHTML = '<li class="list-group-item">Error loading data</li>';
+        });
+</script>
+{% endblock %}

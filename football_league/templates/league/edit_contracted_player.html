@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit Contracted Player</h1>
+    <form id="editPlayerForm">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ player.name }}">
+        </div>
+        <div class="mb-3">
+            <label for="goals" class="form-label">Goals</label>
+            <input type="number" class="form-control" id="goals" name="goals" value="{{ player.goals }}">
+        </div>
+        <div class="mb-3">
+            <label for="height" class="form-label">Height</label>
+            <input type="number" step="0.01" class="form-control" id="height" name="height" value="{{ player.height }}">
+        </div>
+        <div class="mb-3">
+            <label for="nationality" class="form-label">Nationality</label>
+            <input type="text" class="form-control" id="nationality" name="nationality" value="{{ player.nationality }}">
+        </div>
+        <div class="mb-3">
+            <label for="position" class="form-label">Position</label>
+            <input type="text" class="form-control" id="position" name="position" value="{{ player.position }}">
+        </div>
+        <div class="mb-3">
+            <label for="club_id" class="form-label">Club</label>
+            <select class="form-control" id="club_id" name="club_id">
+                <option value="{{ player.club_id }}">{{ player.club_name }}</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Pass the original player data as a JavaScript object
+    const originalPlayerData = {
+        name: "{{ player.name }}",
+        goals: "{{ player.goals }}",
+        height: "{{ player.height }}",
+        nationality: "{{ player.nationality }}",
+        position: "{{ player.position }}",
+        club_id: "{{ player.club_id }}",
+        player_id: "{{ player.player_id }}"
+    };
+
+    console.log("Original Player Data:", originalPlayerData);
+
+    // Fetch clubs for the dropdown
+    fetch('/api/clubs/')
+        .then(response => response.json())
+        .then(data => {
+            const clubSelect = document.getElementById('club_id');
+            clubSelect.innerHTML = ''; // Clear existing options
+
+            data.forEach(club => {
+                const option = document.createElement('option');
+                option.value = club.club_id;
+                option.textContent = club.name;
+                clubSelect.appendChild(option);
+            });
+
+            // Ensure the current club is selected
+            if (originalPlayerData.club_id) {
+                clubSelect.value = originalPlayerData.club_id;
+            }
+        });
+
+    // Handle form submission
+    document.getElementById('editPlayerForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        // Only include fields that have been changed
+        const updatedData = {};
+        formData.forEach((value, key) => {
+            if (value !== originalPlayerData[key]) { // Compare with the original value
+                updatedData[key] = value;
+            }
+        });
+
+        console.log("Updated Data:", updatedData); // Log the data being sent
+
+        fetch(`/api/players/${originalPlayerData.player_id}/`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log("Update successful");
+                window.location.href = '/players/';
+            } else {
+                response.json().then(data => {
+                    console.error("Error response:", data);
+                    alert(JSON.stringify(data));
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Fetch error:", error);
+        });
+    });
+</script>
+{% endblock %}
