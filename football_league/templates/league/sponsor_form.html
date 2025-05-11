@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if sponsor %}Edit Sponsor{% else %}Add New Sponsor{% endif %}</h1>
+    <form id="sponsor-form">
+        {% if sponsor %}
+        <input type="hidden" id="sponsor-id" value="{{ sponsor.sponsor_id }}">
+        {% endif %}
+        <div class="mb-3">
+            <label for="name" class="form-label">Name*</label>
+            <input type="text" class="form-control" id="name" value="{{ sponsor.name if sponsor else '' }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="amount" class="form-label">Amount</label>
+            <input type="number" step="0.01" class="form-control" id="amount" 
+                   value="{{ sponsor.amount if sponsor and sponsor.amount else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="contract_length" class="form-label">Contract Length (months)</label>
+            <input type="number" class="form-control" id="contract_length" 
+                   value="{{ sponsor.contract_length if sponsor and sponsor.contract_length else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="club_id" class="form-label">Club</label>
+            <select class="form-control" id="club_id">
+                <option value="">No Club</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/sponsors" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const sponsorId = document.getElementById('sponsor-id')?.value;
+
+    fetch('/api/clubs/')
+        .then(response => response.json())
+        .then(clubs => {
+            const clubSelect = document.getElementById('club_id');
+            clubs.forEach(club => {
+                const option = document.createElement('option');
+                option.value = club.club_id;
+                option.textContent = club.name;
+                if (sponsorId && club.club_id == "{{ sponsor.club_id if sponsor else '' }}") {
+                    option.selected = true;
+                }
+                clubSelect.appendChild(option);
+            });
+        });
+
+    document.getElementById('sponsor-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = {
+            name: document.getElementById('name').value,
+            amount: document.getElementById('amount').value || null,
+            contract_length: document.getElementById('contract_length').value || null,
+            club_id: document.getElementById('club_id').value || null
+        };
+
+        const url = sponsorId ? `/sponsors/edit/${sponsorId}/` : '/sponsors/add/';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(JSON.stringify(err));
+                });
+            }
+            window.location.href = '/sponsors';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving sponsor: ' + error.message);
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

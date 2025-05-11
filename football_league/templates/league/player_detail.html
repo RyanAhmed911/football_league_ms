@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="player-details" class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Player Details</h1>
+        <div>
+            <a href="/players" class="btn btn-secondary">Back to Players</a>
+        </div>
+    </div>
+    
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h2 id="player-name">Loading...</h2>
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>Position</th>
+                                <td id="player-position">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Nationality</th>
+                                <td id="player-nationality">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Birthdate</th>
+                                <td id="player-birthdate">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Height</th>
+                                <td id="player-height">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Club</th>
+                                <td id="player-club">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Jersey Number</th>
+                                <td id="player-jersey">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Goals</th>
+                                <td id="player-goals">Loading...</td>
+                            </tr>
+                            <tr>
+                                <th>Assists</th>
+                                <td id="player-assists">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="player-image-placeholder bg-light p-5 mb-3">
+                        <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                    </div>
+                    <div class="btn-group">
+                        <a href="#" id="edit-link" class="btn btn-primary">Edit Player</a>
+                        <button class="btn btn-danger" id="delete-btn">Delete Player</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this player? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function getPlayerIdFromUrl() {
+        const path = window.location.pathname;
+        const parts = path.split('/').filter(part => part !== '');
+        return parts[parts.length - 1];
+    }
+
+    const playerId = getPlayerIdFromUrl();
+    
+    if (!playerId || isNaN(playerId)) {
+        document.getElementById('player-details').innerHTML = `
+            <div class="alert alert-danger">
+                Invalid player ID. Please check the URL and try again.
+            </div>
+        `;
+    } else {
+        // Initialize modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        
+        // Fetch player data
+        fetch(`/api/players/${playerId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Player not found');
+                }
+                return response.json();
+            })
+            .then(playerData => {
+                document.getElementById('player-name').textContent = playerData.name || 'N/A';
+                document.getElementById('player-position').textContent = playerData.position || 'N/A';
+                document.getElementById('player-nationality').textContent = playerData.nationality || 'N/A';
+                document.getElementById('player-birthdate').textContent = playerData.birthdate || 'N/A';
+                document.getElementById('player-height').textContent = playerData.height ? `${playerData.height}cm` : 'N/A';
+                document.getElementById('player-goals').textContent = playerData.goals || 0;
+                document.getElementById('player-assists').textContent = playerData.assists || 0;
+                document.getElementById('edit-link').href = `/players/edit/${playerId}`;
+                
+                fetch(`/api/contracted-players/${playerId}/`)
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json().then(contractedData => {
+                                document.getElementById('player-club').textContent = contractedData.club_name || 'N/A';
+                                document.getElementById('player-jersey').textContent = contractedData.jersey_number || 'N/A';
+                                document.getElementById('edit-link').href = `/players/contracted/edit/${playerId}`;
+                            });
+                        } else {
+                            return fetch(`/api/free-agents/${playerId}/`)
+                                .then(response => {
+                                    if (response.ok) {
+                                        return response.json().then(freeAgentData => {
+                                            document.getElementById('player-club').textContent = 'N/A';
+                                            document.getElementById('player-jersey').textContent = 'N/A';
+                                            document.getElementById('edit-link').href = `/players/free-agent/edit/${playerId}`;
+                                        });
+                                    }
+                                    throw new Error('Player contract status not found');
+                                });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading contract status:', error);
+                        document.getElementById('player-club').textContent = 'Status unknown';
+                        document.getElementById('player-jersey').textContent = 'N/A';
+                    });
+            })
+            .catch(error => {
+                console.error('Error loading player data:', error);
+                document.getElementById('player-details').innerHTML = `
+                    <div class="alert alert-danger">
+                        ${error.message || 'Error loading player details. Please try again later.'}
+                    </div>
+                `;
+            });
+        
+        document.getElementById('delete-btn').addEventListener('click', () => {
+            deleteModal.show();
+        });
+        
+        document.getElementById('confirmDelete').addEventListener('click', () => {
+            fetch(`/api/players/${playerId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/players';
+                } else {
+                    alert('Failed to delete player');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the player');
+            });
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

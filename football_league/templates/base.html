@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football League Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: url('https://qwaozke1foqjng3h.public.blob.vercel-storage.com/image-7tjQVDZjGcTB5dvKsRJwywwEz0sKr9.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        .container {
+            background: #00566030; 
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+        }
+
+    
+        .navbar {
+            background: linear-gradient(to right, #005660, #57c3ad);
+        }
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffffff !important; 
+        }
+        .navbar-nav .nav-link {
+            color: #ffffff !important; 
+            font-weight: 500;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #ffc107 !important; 
+        }
+
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            background: #dfdfdf; 
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .card .card-title {
+            font-weight: bold;
+            color: #000000; 
+        }
+        .card .card-text {
+            color: #000000; 
+        }
+        .card .btn {
+            font-size: 0.9rem;
+        }
+
+        .top-scorer-link {
+            color: #1976d2; 
+            text-decoration: none;
+        }
+        .top-scorer-link:hover {
+            color: #0d47a1; 
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">Football League</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/clubs">Clubs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/standings">Standings</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/matches">Matches</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/players">Players</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/coaches">Coaches</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/transfers">Transfers</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/auctions">Auction</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/sponsors">Sponsors</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            <p>&copy; Football League Management System by Ryan, Nusayba and Tasfia.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

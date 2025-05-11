@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Coaches</h1>
+    <a href="/coaches/add" class="btn btn-success">Add New Coach</a>
+</div>
+
+<div class="row" id="coaches-container">
+    {% for coach in coaches %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ coach.name }}</h5>
+                <p class="card-text">Nationality: {{ coach.nationality|default:"N/A" }}</p>
+                <p class="card-text">Club: {{ coach.club_name|default:"N/A" }}</p>
+                <div class="d-flex justify-content-between">
+                    <a href="/coaches/edit/{{ coach.coach_id }}" class="btn btn-warning">Edit</a>
+                    <button class="btn btn-danger delete-btn" data-id="{{ coach.coach_id }}">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const coachId = this.getAttribute('data-id');
+            if (confirm('Are you sure you want to delete this coach?')) {
+                fetch(`/coaches/delete/${coachId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(JSON.stringify(err));
+                        });
+                    }
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting coach: ' + error.message);
+                });
+            }
+        });
+    });
+
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

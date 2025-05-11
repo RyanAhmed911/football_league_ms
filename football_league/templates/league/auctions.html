@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 style="text-align: center; margin-bottom: 20px;">Player Auctions</h1>
+
+<div id="active-auctions" style="margin-bottom: 40px;">
+    <h2 style="text-align: center; margin-bottom: 20px;">Active Auctions</h2>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="bg-gradient text-black">
+                <tr>
+                    <th>Player</th>
+                    <th>Current Highest Bidder</th>
+                    <th>Current Bid</th>
+                    <th>Time Remaining</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="active-auctions-body">
+                <tr>
+                    <td colspan="5" class="text-center">Loading active auctions...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="place-bid-section" class="card mb-4">
+    <div class="card-header bg-gradient text-black">
+        <h3>Place a Bid</h3>
+    </div>
+    <div class="card-body">
+        <form id="bid-form">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="player_id" class="form-label">Player:</label>
+                    <select id="player_id" name="player_id" class="form-select" required>
+                        <option value="">Select a player</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="club_id" class="form-label">Bidding Club:</label>
+                    <select id="club_id" name="club_id" class="form-select" required>
+                        <option value="">Select a club</option>
+                    </select>
+                    <small id="club-budget" class="form-text text-muted">Available Budget: $0</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="bid_amount" class="form-label">Bid Amount ($):</label>
+                    <input type="number" id="bid_amount" name="bid_amount" class="form-control" min="1000" step="1000" required>
+                </div>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-gradient">Place Bid</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="create-auction-section" class="card">
+    <div class="card-header bg-gradient text-black">
+        <h3>Create New Auction</h3>
+    </div>
+    <div class="card-body">
+        <form id="auction-form">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="auction_player_id" class="form-label">Free Agent:</label>
+                    <select id="auction_player_id" name="player_id" class="form-select" required>
+                        <option value="">Select a free agent</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="auction_club_id" class="form-label">Initial Bidding Club:</label>
+                    <select id="auction_club_id" name="club_id" class="form-select" required>
+                        <option value="">Select a club</option>
+                    </select>
+                    <small id="auction-club-budget" class="form-text text-muted">Available Budget: $0</small>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="highest_bid" class="form-label">Starting Bid ($):</label>
+                    <input type="number" id="highest_bid" name="highest_bid" class="form-control" min="1000" step="1000" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="auction_duration" class="form-label">Duration (seconds):</label>
+                    <input type="number" id="auction_duration" name="auction_duration" class="form-control" min="30" max="300" value="120" required>
+                    <small class="form-text text-muted">Between 30-300 seconds</small>
+                </div>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-gradient">Create Auction</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bid Confirmation Modal -->
+<div class="modal fade" id="bidConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Bid</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to place a bid of <span id="confirm-bid-amount"></span> for <span id="confirm-player-name"></span>?</p>
+                <p>Club Budget: $<span id="confirm-club-budget"></span></p>
+                <p>Remaining Budget After Bid: $<span id="confirm-remaining-budget"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmBidBtn">Confirm Bid</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Auction Modal -->
+<div class="modal fade" id="completeAuctionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Auction Complete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>The auction for <span id="complete-player-name"></span> has ended!</p>
+                <p>Winning club: <span id="winning-club-name"></span></p>
+                <p>Final bid amount: $<span id="final-bid-amount"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Auction Confirmation Modal -->
+<div class="modal fade" id="cancelAuctionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Cancel Auction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel the auction for <span id="cancel-player-name"></span>?</p>
+                <p>This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Auction</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelBtn">Yes, Cancel Auction</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize modals
+    const bidConfirmModal = new bootstrap.Modal(document.getElementById('bidConfirmModal'));
+    const completeAuctionModal = new bootstrap.Modal(document.getElementById('completeAuctionModal'));
+    const cancelAuctionModal = new bootstrap.Modal(document.getElementById('cancelAuctionModal'));
+    
+    // Store auction data and timers
+    let auctions = [];
+    let auctionTimers = {};
+    let auctionDurations = {};
+    let freeAgents = [];
+    let clubs = [];
+    let bidData = {};
+    let cancelData = {};
+    
+    // Fetch data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load free agents
+        fetch('/api/free-agents/')
+            .then(response => response.json())
+            .then(data => {
+                freeAgents = data;
+                populateFreeAgentDropdowns();
+            })
+            .catch(error => console.error('Error loading free agents:', error));
+        
+        // Load clubs
+        fetch('/api/clubs/')
+            .then(response => response.json())
+            .then(data => {
+                clubs = data;
+                populateClubDropdowns();
+            })
+            .catch(error => console.error('Error loading clubs:', error));
+        
+        // Load active auctions
+        loadActiveAuctions();
+        
+        // Set up form event listeners
+        document.getElementById('bid-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            prepareBidConfirmation();
+        });
+        
+        document.getElementById('auction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            createAuction();
+        });
+        
+        document.getElementById('confirmBidBtn').addEventListener('click', function() {
+            placeBid();
+        });
+        
+        document.getElementById('confirmCancelBtn').addEventListener('click', function() {
+            cancelAuction();
+        });
+        
+        document.getElementById('club_id').addEventListener('change', updateClubBudget);
+        document.getElementById('auction_club_id').addEventListener('change', updateAuctionClubBudget);
+        
+        setInterval(loadActiveAuctions, 10000);
+    });
+    
+    function populateFreeAgentDropdowns() {
+    const playerDropdown = document.getElementById('player_id');
+    const auctionPlayerDropdown = document.getElementById('auction_player_id');
+
+    const selectedPlayerId = playerDropdown.value;
+    const selectedAuctionPlayerId = auctionPlayerDropdown.value;
+
+    playerDropdown.innerHTML = '<option value="">Select a player</option>';
+    auctionPlayerDropdown.innerHTML = '<option value="">Select a free agent</option>';
+
+    freeAgents.forEach(agent => {
+        const isInActiveAuction = auctions.some(auction => auction.player_id == agent.player_id);
+
+        if (isInActiveAuction) {
+            const playerOption = document.createElement('option');
+            playerOption.value = agent.player_id;
+            playerOption.textContent = agent.name || `Player #${agent.player_id}`;
+            playerDropdown.appendChild(playerOption);
+        }
+
+        const auctionOption = document.createElement('option');
+        auctionOption.value = agent.player_id;
+        auctionOption.textContent = agent.name || `Player #${agent.player_id}`;
+        auctionPlayerDropdown.appendChild(auctionOption);
+    });
+
+    if (selectedPlayerId) {
+        playerDropdown.value = selectedPlayerId;
+    }
+    if (selectedAuctionPlayerId) {
+        auctionPlayerDropdown.value = selectedAuctionPlayerId;
+    }
+}
+    
+    function populateClubDropdowns() {
+        const clubDropdown = document.getElementById('club_id');
+        const auctionClubDropdown = document.getElementById('auction_club_id');
+        
+        clubDropdown.innerHTML = '<option value="">Select a club</option>';
+        auctionClubDropdown.innerHTML = '<option value="">Select a club</option>';
+        
+        clubs.forEach(club => {
+            const clubOption = document.createElement('option');
+            clubOption.value = club.club_id;
+            clubOption.textContent = `${club.name} ($${parseFloat(club.budget).toLocaleString()})`;
+            clubOption.dataset.budget = club.budget;
+            
+            const auctionClubOption = document.createElement('option');
+            auctionClubOption.value = club.club_id;
+            auctionClubOption.textContent = `${club.name} ($${parseFloat(club.budget).toLocaleString()})`;
+            auctionClubOption.dataset.budget = club.budget;
+            
+            clubDropdown.appendChild(clubOption);
+            auctionClubDropdown.appendChild(auctionClubOption);
+        });
+    }
+    
+    function updateClubBudget() {
+        const clubSelect = document.getElementById('club_id');
+        const budgetDisplay = document.getElementById('club-budget');
+        
+        if (clubSelect.selectedIndex > 0) {
+            const selectedOption = clubSelect.options[clubSelect.selectedIndex];
+            const budget = parseFloat(selectedOption.dataset.budget);
+            budgetDisplay.textContent = `Available Budget: $${budget.toLocaleString()}`;
+        } else {
+            budgetDisplay.textContent = 'Available Budget: $0';
+        }
+    }
+    
+    function updateAuctionClubBudget() {
+        const clubSelect = document.getElementById('auction_club_id');
+        const budgetDisplay = document.getElementById('auction-club-budget');
+        
+        if (clubSelect.selectedIndex > 0) {
+            const selectedOption = clubSelect.options[clubSelect.selectedIndex];
+            const budget = parseFloat(selectedOption.dataset.budget);
+            budgetDisplay.textContent = `Available Budget: $${budget.toLocaleString()}`;
+        } else {
+            budgetDisplay.textContent = 'Available Budget: $0';
+        }
+    }
+    
+    function loadActiveAuctions() {
+        fetch('/api/auctions/active/')
+            .then(response => response.json())
+            .then(data => {
+                auctions = data;
+                renderAuctions();
+                setupAuctionTimers();
+                populateFreeAgentDropdowns(); 
+            })
+            .catch(error => console.error('Error loading auctions:', error));
+    }
+    
+    function renderAuctions() {
+        const tableBody = document.getElementById('active-auctions-body');
+        
+        if (auctions.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No active auctions found</td></tr>';
+            return;
+        }
+        
+        tableBody.innerHTML = '';
+        
+        auctions.forEach(auction => {
+            const row = document.createElement('tr');
+            
+            const playerName = auction.player_name || `Player #${auction.player_id}`;
+            const clubName = auction.club_name || `Club #${auction.club_id}`;
+            
+            row.innerHTML = `
+                <td>${playerName}</td>
+                <td>${clubName}</td>
+                <td>$${parseFloat(auction.highest_bid).toLocaleString()}</td>
+                <td id="timer-${auction.player_id}">Loading...</td>
+                <td>
+                    <button class="btn btn-sm btn-gradient bid-btn me-2" data-player-id="${auction.player_id}" data-player-name="${playerName}" data-current-bid="${auction.highest_bid}
+                                <td>
+                    <button class="btn btn-sm btn-gradient bid-btn me-2" data-player-id="${auction.player_id}" data-player-name="${playerName}" data-current-bid="${auction.highest_bid}">
+                        Place Bid
+                    </button>
+                    <button class="btn btn-sm btn-danger cancel-btn" data-player-id="${auction.player_id}" data-player-name="${playerName}">
+                        Cancel Auction
+                    </button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        document.querySelectorAll('.bid-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const playerId = this.getAttribute('data-player-id');
+                const playerName = this.getAttribute('data-player-name');
+                const currentBid = parseFloat(this.getAttribute('data-current-bid'));
+                
+                document.getElementById('player_id').value = playerId;
+                document.getElementById('bid_amount').value = currentBid + 1000;
+                
+                updateClubBudget();
+                
+                document.getElementById('place-bid-section').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        document.querySelectorAll('.cancel-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const playerId = this.getAttribute('data-player-id');
+                const playerName = this.getAttribute('data-player-name');
+                
+                cancelData = {
+                    player_id: playerId
+                };
+                
+                document.getElementById('cancel-player-name').textContent = playerName;
+                
+                cancelAuctionModal.show();
+            });
+        });
+    }
+    
+    function setupAuctionTimers() {
+        Object.keys(auctionTimers).forEach(key => {
+            clearInterval(auctionTimers[key]);
+        });
+        
+        auctionTimers = {};
+        
+        auctions.forEach(auction => {
+            const playerId = auction.player_id;
+            const timerElement = document.getElementById(`timer-${playerId}`);
+            
+            if (!timerElement) return;
+            
+            let timeLeft = auctionDurations[playerId] || 120;
+            
+            function updateTimer() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                
+                auctionDurations[playerId] = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(auctionTimers[playerId]);
+                    completeAuction(auction);
+                }
+                
+                timeLeft--;
+            }
+            
+            updateTimer();
+            
+            auctionTimers[playerId] = setInterval(updateTimer, 1000);
+        });
+    }
+    
+    function prepareBidConfirmation() {
+        const playerId = document.getElementById('player_id').value;
+        const clubId = document.getElementById('club_id').value;
+        const bidAmount = parseFloat(document.getElementById('bid_amount').value);
+        
+        if (!playerId || !clubId || isNaN(bidAmount)) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        const player = freeAgents.find(p => p.player_id == playerId);
+        const club = clubs.find(c => c.club_id == clubId);
+        
+        if (!player || !club) {
+            alert('Invalid player or club selection');
+            return;
+        }
+        
+        if (bidAmount > parseFloat(club.budget)) {
+            alert(`Bid amount exceeds club budget. Maximum bid allowed: $${parseFloat(club.budget).toLocaleString()}`);
+            return;
+        }
+        
+        const auction = auctions.find(a => a.player_id == playerId);
+        if (!auction) {
+            alert('Auction not found');
+            return;
+        }
+        
+        if (bidAmount <= parseFloat(auction.highest_bid)) {
+            alert(`Bid must be higher than current highest bid: $${parseFloat(auction.highest_bid).toLocaleString()}`);
+            return;
+        }
+        
+        bidData = {
+            player_id: playerId,
+            club_id: clubId,
+            bid_amount: bidAmount
+        };
+        
+        document.getElementById('confirm-player-name').textContent = player.name || `Player #${playerId}`;
+        document.getElementById('confirm-bid-amount').textContent = `$${bidAmount.toLocaleString()}`;
+        document.getElementById('confirm-club-budget').textContent = parseFloat(club.budget).toLocaleString();
+        document.getElementById('confirm-remaining-budget').textContent = (parseFloat(club.budget) - bidAmount).toLocaleString();
+        
+        bidConfirmModal.show();
+    }
+    
+    function placeBid() {
+        fetch('/api/auctions/bid/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(bidData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to place bid');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            bidConfirmModal.hide();
+            alert(data.message || 'Bid placed successfully!');
+            
+            document.getElementById('bid-form').reset();
+            
+            loadActiveAuctions();
+            
+            fetch('/api/clubs/')
+                .then(response => response.json())
+                .then(data => {
+                    clubs = data;
+                    populateClubDropdowns();
+                });
+        })
+        .catch(error => {
+            console.error('Error placing bid:', error);
+            alert(error.message || 'Failed to place bid. Please try again.');
+            bidConfirmModal.hide();
+        });
+    }
+    
+    function createAuction() {
+        const formData = new FormData(document.getElementById('auction-form'));
+        const playerId = formData.get('player_id');
+        const clubId = formData.get('club_id');
+        const highestBid = parseFloat(formData.get('highest_bid'));
+        const duration = parseInt(formData.get('auction_duration'));
+        
+        if (!playerId || !clubId || isNaN(highestBid) || isNaN(duration)) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        const club = clubs.find(c => c.club_id == clubId);
+        
+        if (highestBid > parseFloat(club.budget)) {
+            alert(`Starting bid exceeds club budget. Maximum bid allowed: $${parseFloat(club.budget).toLocaleString()}`);
+            return;
+        }
+        
+        const auctionData = {
+            player_id: playerId,
+            club_id: clubId,
+            highest_bid: highestBid
+        };
+        
+        fetch('/api/auctions/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(auctionData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to create auction');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message || 'Auction created successfully!');
+            
+            auctionDurations[playerId] = duration;
+            
+            document.getElementById('auction-form').reset();
+            
+            loadActiveAuctions();
+            
+            fetch('/api/clubs/')
+                .then(response => response.json())
+                .then(data => {
+                    clubs = data;
+                    populateClubDropdowns();
+                });
+        })
+        .catch(error => {
+            console.error('Error creating auction:', error);
+            alert(error.message || 'Failed to create auction. Please try again.');
+        });
+    }
+    
+    function completeAuction(auction) {
+        const playerName = auction.player_name || `Player #${auction.player_id}`;
+        const clubName = auction.club_name || `Club #${auction.club_id}`;
+        
+        document.getElementById('complete-player-name').textContent = playerName;
+        document.getElementById('winning-club-name').textContent = clubName;
+        document.getElementById('final-bid-amount').textContent = parseFloat(auction.highest_bid).toLocaleString();
+        
+        completeAuctionModal.show();
+        
+        fetch(`/api/auctions/${auction.player_id}/${auction.club_id}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to complete auction');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Auction completed:', data);
+            
+            delete auctionDurations[auction.player_id];
+            
+            setTimeout(loadActiveAuctions, 2000);
+            
+            fetch('/api/free-agents/')
+                .then(response => response.json())
+                .then(data => {
+                    freeAgents = data;
+                    populateFreeAgentDropdowns();
+                });
+                
+            fetch('/api/clubs/')
+                .then(response => response.json())
+                .then(data => {
+                    clubs = data;
+                    populateClubDropdowns();
+                });
+        })
+        .catch(error => {
+            console.error('Error completing auction:', error);
+            alert('Error completing auction: ' + error.message);
+        });
+    }
+    
+    function cancelAuction() {
+        fetch(`/api/auctions/${cancelData.player_id}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to cancel auction');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            cancelAuctionModal.hide();
+            alert(data.message || 'Auction cancelled successfully!');
+            
+            delete auctionDurations[cancelData.player_id];
+            
+            loadActiveAuctions();
+            
+            fetch('/api/clubs/')
+                .then(response => response.json())
+                .then(data => {
+                    clubs = data;
+                    populateClubDropdowns();
+                });
+        })
+        .catch(error => {
+            console.error('Error cancelling auction:', error);
+            alert(error.message || 'Failed to cancel auction. Please try again.');
+            cancelAuctionModal.hide();
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+<style>
+    .bg-gradient {
+        background: linear-gradient(to right, #15045f, #3225e0);
+        color: rgb(255, 255, 255);
+    }
+    
+    .btn-gradient {
+        background: linear-gradient(to right, #15045f, #3225e0);
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .btn-gradient:hover {
+        background: #046468;
+        color: #ffffff;
+    }
+    
+    #active-auctions-body tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

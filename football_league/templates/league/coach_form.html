@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if coach %}Edit Coach{% else %}Add New Coach{% endif %}</h1>
+    <form id="coach-form">
+        {% if coach %}
+        <input type="hidden" id="coach-id" value="{{ coach.coach_id }}">
+        {% endif %}
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" value="{{ coach.name if coach else '' }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="nationality" class="form-label">Nationality</label>
+            <input type="text" class="form-control" id="nationality" value="{{ coach.nationality if coach else '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="club_id" class="form-label">Club</label>
+            <select class="form-control" id="club_id">
+                <option value="">No Club</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/coaches" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const coachId = document.getElementById('coach-id')?.value;
+
+    fetch('/api/clubs/')
+        .then(response => response.json())
+        .then(clubs => {
+            const clubSelect = document.getElementById('club_id');
+            clubs.forEach(club => {
+                const option = document.createElement('option');
+                option.value = club.club_id;
+                option.textContent = club.name;
+                if (coachId && club.club_id == "{{ coach.club_id }}") {
+                    option.selected = true;
+                }
+                clubSelect.appendChild(option);
+            });
+        });
+
+    document.getElementById('coach-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = {
+            name: document.getElementById('name').value,
+            nationality: document.getElementById('nationality').value,
+            club_id: document.getElementById('club_id').value || null
+        };
+
+        const url = coachId ? `/coaches/edit/${coachId}/` : '/coaches/add/';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(JSON.stringify(err));
+                });
+            }
+            window.location.href = '/coaches';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving coach: ' + error.message);
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

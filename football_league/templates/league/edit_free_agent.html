@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit Free Agent</h1>
+    <form id="editPlayerForm">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ player.name }}">
+        </div>
+        <div class="mb-3">
+            <label for="birthdate" class="form-label">Birthdate</label>
+            <input type="date" class="form-control" id="birthdate" name="birthdate" value="{{ player.birthdate }}">
+        </div>
+        <div class="mb-3">
+            <label for="height" class="form-label">Height</label>
+            <input type="number" step="0.01" class="form-control" id="height" name="height" value="{{ player.height }}">
+        </div>
+        <div class="mb-3">
+            <label for="nationality" class="form-label">Nationality</label>
+            <input type="text" class="form-control" id="nationality" name="nationality" value="{{ player.nationality }}">
+        </div>
+        <div class="mb-3">
+            <label for="position" class="form-label">Position</label>
+            <input type="text" class="form-control" id="position" name="position" value="{{ player.position }}">
+        </div>
+        <div class="mb-3">
+            <label for="appearances" class="form-label">Appearances</label>
+            <input type="number" class="form-control" id="appearances" name="appearances" value="{{ player.appearances }}">
+        </div>
+        <div class="mb-3">
+            <label for="saves" class="form-label">Saves</label>
+            <input type="number" class="form-control" id="saves" name="saves" value="{{ player.saves }}">
+        </div>
+        <div class="mb-3">
+            <label for="goals" class="form-label">Goals</label>
+            <input type="number" class="form-control" id="goals" name="goals" value="{{ player.goals }}">
+        </div>
+        <div class="mb-3">
+            <label for="assists" class="form-label">Assists</label>
+            <input type="number" class="form-control" id="assists" name="assists" value="{{ player.assists }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const originalPlayerData = {
+        name: "{{ player.name }}",
+        birthdate: "{{ player.birthdate }}",
+        height: "{{ player.height }}",
+        nationality: "{{ player.nationality }}",
+        position: "{{ player.position }}",
+        appearances: "{{ player.appearances }}",
+        saves: "{{ player.saves }}",
+        goals: "{{ player.goals }}",
+        assists: "{{ player.assists }}",
+        player_id: "{{ player.player_id }}"
+    };
+
+    document.getElementById('editPlayerForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        // Include only fields that have changed
+        const updatedData = {};
+        formData.forEach((value, key) => {
+            if (value !== originalPlayerData[key]) {
+                updatedData[key] = value;
+            }
+        });
+
+        fetch(`/api/players/${originalPlayerData.player_id}/`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/players/';
+            } else {
+                response.json().then(data => {
+                    alert(JSON.stringify(data));
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    });
+</script>
+{% endblock %}

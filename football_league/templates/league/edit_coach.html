@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit Coach</h1>
+    <form id="editCoachForm">
+        <input type="hidden" id="coach_id" name="coach_id" value="{{ coach.coach_id }}">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ coach.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="nationality" class="form-label">Nationality</label>
+            <input type="text" class="form-control" id="nationality" name="nationality" value="{{ coach.nationality }}">
+        </div>
+        <div class="mb-3">
+            <label for="club_id" class="form-label">Club</label>
+            <select class="form-control" id="club_id" name="club_id">
+                <option value="">No Club</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/coaches" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const coachId = document.getElementById('coach_id').value;
+
+    fetch('/api/clubs/')
+        .then(response => response.json())
+        .then(data => {
+            const clubSelect = document.getElementById('club_id');
+            data.forEach(club => {
+                const option = document.createElement('option');
+                option.value = club.club_id;
+                option.textContent = club.name;
+                if (club.club_id == "{{ coach.club_id }}") {
+                    option.selected = true;
+                }
+                clubSelect.appendChild(option);
+            });
+        });
+
+    document.getElementById('editCoachForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        fetch(`/api/coaches/${coachId}/`, {
+            method: 'PUT',
+            body: JSON.stringify(Object.fromEntries(formData)),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/coaches/';
+            } else {
+                response.json().then(data => alert(JSON.stringify(data)));
+            }
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

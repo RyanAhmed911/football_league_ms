@@ -1,0 +1,239 @@
+<!-- add_player.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Add New Player</h1>
+    
+    <ul class="nav nav-tabs" id="playerTypeTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="contracted-tab" data-bs-toggle="tab" data-bs-target="#contracted" type="button" role="tab" aria-controls="contracted" aria-selected="true">Contracted Player</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="free-agent-tab" data-bs-toggle="tab" data-bs-target="#free-agent" type="button" role="tab" aria-controls="free-agent" aria-selected="false">Free Agent</button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="playerTypeTabsContent">
+        <!-- Contracted Player Form -->
+        <div class="tab-pane fade show active" id="contracted" role="tabpanel" aria-labelledby="contracted-tab">
+            <form id="contractedPlayerForm" class="mt-3">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="birthdate" class="form-label">Birthdate</label>
+                    <input type="date" class="form-control" id="birthdate" name="birthdate">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="height" class="form-label">Height (cm)</label>
+                    <input type="number" step="0.01" class="form-control" id="height" name="height">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="nationality" class="form-label">Nationality</label>
+                    <input type="text" class="form-control" id="nationality" name="nationality">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="position" class="form-label">Position</label>
+                    <select class="form-select" id="position" name="position">
+                        <option value="">Select Position</option>
+                        <option value="Goalkeeper">Goalkeeper</option>
+                        <option value="Defender">Defender</option>
+                        <option value="Midfielder">Midfielder</option>
+                        <option value="Forward">Forward</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="club_id" class="form-label">Club</label>
+                    <select class="form-select" id="club_id" name="club_id" required>
+                        <option value="">Select Club</option>
+                        {% for club in clubs %}
+                        <option value="{{ club.club_id }}">{{ club.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="squad_id" class="form-label">Squad</label>
+                    <select class="form-select" id="squad_id" name="squad_id" required disabled>
+                        <option value="">Select Club First</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="jersey_number" class="form-label">Jersey Number</label>
+                    <input type="number" class="form-control" id="jersey_number" name="jersey_number">
+                </div>
+                
+                <input type="hidden" name="playerType" value="contracted">
+                
+                <button type="submit" class="btn btn-primary">Add Contracted Player</button>
+            </form>
+        </div>
+        
+        <!-- Free Agent Form -->
+        <div class="tab-pane fade" id="free-agent" role="tabpanel" aria-labelledby="free-agent-tab">
+            <form id="freeAgentForm" class="mt-3">
+                <div class="mb-3">
+                    <label for="fa_name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="fa_name" name="name" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="fa_birthdate" class="form-label">Birthdate</label>
+                    <input type="date" class="form-control" id="fa_birthdate" name="birthdate">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="fa_height" class="form-label">Height (cm)</label>
+                    <input type="number" step="0.01" class="form-control" id="fa_height" name="height">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="fa_nationality" class="form-label">Nationality</label>
+                    <input type="text" class="form-control" id="fa_nationality" name="nationality">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="fa_position" class="form-label">Position</label>
+                    <select class="form-select" id="fa_position" name="position">
+                        <option value="">Select Position</option>
+                        <option value="Goalkeeper">Goalkeeper</option>
+                        <option value="Defender">Defender</option>
+                        <option value="Midfielder">Midfielder</option>
+                        <option value="Forward">Forward</option>
+                    </select>
+                </div>
+                
+                <input type="hidden" name="playerType" value="free_agent">
+                
+                <button type="submit" class="btn btn-primary">Add Free Agent</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle club selection to load squads
+    document.getElementById('club_id').addEventListener('change', function() {
+        const clubId = this.value;
+        const squadSelect = document.getElementById('squad_id');
+        
+        if (clubId) {
+            squadSelect.disabled = false;
+            squadSelect.innerHTML = '<option value="">Loading squads...</option>';
+            
+            // Fetch squads for the selected club
+            fetch(`/api/clubs/${clubId}/squads/`)
+                .then(response => response.json())
+                .then(data => {
+                    squadSelect.innerHTML = '<option value="">Select Squad</option>';
+                    data.forEach(squad => {
+                        const option = document.createElement('option');
+                        option.value = squad.squad_id;
+                        option.textContent = squad.squad_type;
+                        squadSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching squads:', error);
+                    squadSelect.innerHTML = '<option value="">Error loading squads</option>';
+                });
+        } else {
+            squadSelect.disabled = true;
+            squadSelect.innerHTML = '<option value="">Select Club First</option>';
+        }
+    });
+    
+    // Handle contracted player form submission
+    document.getElementById('contractedPlayerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        if (data.height) data.height = parseFloat(data.height);
+        if (data.club_id) data.club_id = parseInt(data.club_id);
+        if (data.squad_id) data.squad_id = parseInt(data.squad_id);
+        if (data.jersey_number) data.jersey_number = parseInt(data.jersey_number);
+        
+        fetch('/api/players/add/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                alert('Player added successfully!');
+                window.location.href = '/players/';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while adding the player.');
+        });
+    });
+    
+    // Handle free agent form submission
+    document.getElementById('freeAgentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        if (data.height) data.height = parseFloat(data.height);
+        
+        fetch('/api/players/add/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                alert('Free agent added successfully!');
+                window.location.href = '/players/';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while adding the free agent.');
+        });
+    });
+    
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}
